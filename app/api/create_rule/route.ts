@@ -1,6 +1,11 @@
+
+
+// Function to parse the rule string into an AST
 // Define the structure of AST Node
 interface ASTNode {
     type: string;
+    field?: string;
+    operator?: string;
     value?: string | number;
     left?: ASTNode;
     right?: ASTNode;
@@ -33,7 +38,7 @@ function parseRule(ruleString: string): ASTNode | undefined {
 
             return {
                 type: "operator",
-                value: operator || '',
+                value: operator || '', // Provide a fallback for operator if undefined
                 left,
                 right,
             };
@@ -41,9 +46,13 @@ function parseRule(ruleString: string): ASTNode | undefined {
         // Handle conditions like "age > 30" or "department = 'Sales'"
         else if (conditionRegex.test(`${token} ${tokens[0]} ${tokens[1]}`)) {
             const [field, operator, value] = [token, tokens.shift(), tokens.shift()];
+
+            // Ensure value is not undefined, apply fallback if necessary
             return {
-                type: "operand",
-                value: `${field} ${operator} ${value}`,
+                type: "condition",
+                field: field,
+                operator: operator,
+                value: value?.replace(/'/g, '') || '', // Fallback to an empty string if value is undefined
             };
         }
         // Handle logical operators "AND" and "OR"
@@ -61,6 +70,7 @@ function parseRule(ruleString: string): ASTNode | undefined {
 
     return buildAST(tokens);
 }
+
 
 // Named export for the POST method
 export async function POST(req: Request) {
