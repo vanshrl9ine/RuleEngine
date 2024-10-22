@@ -89,8 +89,10 @@ try {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Rule String </FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter rule string" {...field} />
+                    <FormControl >
+                      <Input placeholder="Enter rule string" {...field} 
+                      />
+                      
                     </FormControl>
                     <FormMessage />
                   </FormItem>

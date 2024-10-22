@@ -10,24 +10,13 @@ interface ASTNode {
     right?: ASTNode;
 }
 
+// Example usage in the POST function
 export async function POST(req: Request) {
     try {
-        const { rules } = await req.json();
+        const { rules, operator } = await req.json(); // Expecting 'operator' in the request body
         console.log("Received Rules:", rules); // Log incoming rules
 
-        if (!Array.isArray(rules) || rules.length === 0) {
-            return new Response(JSON.stringify({ error: 'At least one rule is required' }), { status: 400 });
-        }
-
-        // Parse rules and filter out undefined values
-        const asts: (ASTNode | undefined)[] = rules.map(rule => parseRule(rule));
-        const validAsts: ASTNode[] = asts.filter((ast): ast is ASTNode => ast !== undefined);
-
-        if (validAsts.length === 0) {
-            return new Response(JSON.stringify({ error: 'No valid ASTs to combine' }), { status: 400 });
-        }
-
-        const combinedAST = combineASTs(validAsts); // Combine valid ASTs
+        const combinedAST = combineRules(rules, operator || "AND"); // Use provided operator, default to "AND"
 
         return new Response(JSON.stringify(combinedAST), { status: 200 });
     } catch (error) {
@@ -36,16 +25,75 @@ export async function POST(req: Request) {
     }
 }
 
-// Function to combine multiple ASTs
-function combineASTs(asts: ASTNode[]): ASTNode | undefined {
-    if (asts.length === 0) return undefined;
-    if (asts.length === 1) return asts[0]; // Return single AST directly if only one exists
+// Function to combine multiple rule strings into a single AST
+function combineRules(rules: string[], operator: string = "AND"): ASTNode | undefined {
+    if (!rules || rules.length === 0) return undefined;
 
-    // For simplicity, combine with AND (you can change this based on your strategy)
-    return {
+    // Parse all rules into ASTs
+    const asts: (ASTNode | undefined)[] = rules.map(rule => parseRule(rule));
+    const validAsts: ASTNode[] = asts.filter((ast): ast is ASTNode => ast !== undefined);
+
+    if (validAsts.length === 0) {
+        return undefined; // No valid ASTs to combine
+    }
+
+    // Deduplicate conditions from valid ASTs
+    const uniqueConditions = deduplicateConditions(validAsts);
+
+    // If only one unique condition, return it directly
+    if (uniqueConditions.length === 1) {
+        return uniqueConditions[0];
+    }
+
+    // Combine unique conditions into a single AST
+    return combineUniqueConditions(uniqueConditions, operator);
+}
+
+// Helper function to deduplicate conditions
+function deduplicateConditions(asts: ASTNode[]): ASTNode[] {
+    const seenConditions = new Set<string>();
+    const uniqueConditions: ASTNode[] = [];
+
+    asts.forEach(ast => {
+        collectConditions(ast, uniqueConditions, seenConditions);
+    });
+
+    return uniqueConditions;
+}
+
+// Helper function to collect unique conditions
+function collectConditions(ast: ASTNode, conditions: ASTNode[], seen: Set<string>) {
+    if (ast.type === "condition") {
+        const conditionKey = `${ast.field} ${ast.operator} ${ast.value}`;
+        if (!seen.has(conditionKey)) {
+            seen.add(conditionKey);
+            conditions.push(ast);
+        }
+    } else if (ast.type === "operator") {
+        if (ast.left) collectConditions(ast.left, conditions, seen);
+        if (ast.right) collectConditions(ast.right, conditions, seen);
+    }
+}
+
+// Function to combine unique conditions into an AST
+function combineUniqueConditions(conditions: ASTNode[], operator: string): ASTNode {
+    // Start with the first condition as the initial left node
+    let combinedAST: ASTNode = {
         type: "operator",
-        value: "AND",
-        left: asts[0],
-        right: asts[1],
+        value: operator,
+        left: conditions[0],
+        right: conditions[1],
     };
+
+    // Combine the rest of the conditions into the right side
+    for (let i = 2; i < conditions.length; i++) {
+        combinedAST = {
+            type: "operator",
+            value: operator,
+            left: combinedAST,
+            right: conditions[i],
+        };
+    }
+
+    return combinedAST;
 }

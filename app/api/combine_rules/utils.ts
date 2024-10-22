@@ -6,11 +6,12 @@ interface ASTNode {
     left?: ASTNode;
     right?: ASTNode;
 }
+// Function to parse the rule string into an AST
 export function parseRule(ruleString: string): ASTNode | undefined {
     // Regex to match simple conditions like "age > 30" or "department = 'Sales'"
     const conditionRegex = /(\w+)\s*(>|<|=)\s*('[^']*'|\d+)/;
 
-    // Tokenize the rule string
+    // Tokenize the rule string and handle parentheses properly
     let tokens = ruleString
         .replace(/\(/g, " ( ")
         .replace(/\)/g, " ) ")
@@ -26,7 +27,7 @@ export function parseRule(ruleString: string): ASTNode | undefined {
         // Handle opening parenthesis for nested expressions
         if (token === "(") {
             const left = buildAST(tokens);
-            const operator = tokens.shift();
+            const operator = tokens.shift(); // Get the operator (AND/OR)
             const right = buildAST(tokens);
             tokens.shift(); // Remove closing parenthesis ')'
 
@@ -41,7 +42,6 @@ export function parseRule(ruleString: string): ASTNode | undefined {
         else if (conditionRegex.test(`${token} ${tokens[0]} ${tokens[1]}`)) {
             const [field, operator, value] = [token, tokens.shift(), tokens.shift()];
 
-            // Ensure value is not undefined, apply fallback if necessary
             return {
                 type: "condition",
                 field: field,
