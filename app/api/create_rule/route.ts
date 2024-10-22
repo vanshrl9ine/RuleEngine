@@ -15,7 +15,8 @@ interface ASTNode {
 // Function to parse the rule string into an AST
 function parseRule(ruleString: string): ASTNode | undefined {
   // Regex to match simple conditions like "age > 30" or "department = 'Sales'"
-  const conditionRegex = /(\w+)\s*(>|<|=)\s*('[^']*'|\d+)/;
+  const conditionRegex = /(\w+)\s*(>|<|>=|<=|=|!=)\s*('[^']*'|\d+)/;
+
 
   // Tokenize the rule string and handle parentheses properly
   let tokens = ruleString

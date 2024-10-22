@@ -20,8 +20,57 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-// Define the form schema with Zod for attribute inputs and AST
+// Function to evaluate the rule against user attributes
+const evaluateRuleFunction = (ast: any, userAttributes: any): boolean => {
+  switch (ast.type) {
+    case "operator":
+      return evaluateOperator(ast, userAttributes);
+    case "condition":
+      return evaluateCondition(ast, userAttributes);
+    default:
+      throw new Error(`Unknown AST type: ${ast.type}`);
+  }
+};
+
+// Function to evaluate operators (AND, OR)
+const evaluateOperator = (ast: any, userAttributes: any): boolean => {
+  const { value, left, right } = ast;
+
+  if (value === "AND") {
+    return evaluateRuleFunction(left, userAttributes) && evaluateRuleFunction(right, userAttributes);
+  } else if (value === "OR") {
+    return evaluateRuleFunction(left, userAttributes) || evaluateRuleFunction(right, userAttributes);
+  } else {
+    throw new Error(`Unknown operator: ${value}`);
+  }
+};
+
+// Function to evaluate individual conditions
+const evaluateCondition = (condition: any, userAttributes: any): boolean => {
+  const { field, operator, value } = condition;
+  const userValue = userAttributes[field];
+
+  switch (operator) {
+    case ">":
+      return userValue > value;
+    case "<":
+      return userValue < value;
+    case ">=":
+      return userValue >= value;
+    case "<=":
+      return userValue <= value;
+    case "=":
+      return userValue === value;
+    case "!=":
+      return userValue !== value;
+    default:
+      throw new Error(`Unknown operator: ${operator}`);
+  }
+};
+
 const formSchema = z.object({
   age: z.number().nullable().optional(), // Nullable number for age
   department: z.string().nullable().optional(), // Nullable string for department
@@ -42,19 +91,16 @@ const EvaluateRuleForm = () => {
     },
   });
 
-  // State to hold evaluation result
-  const [result, setResult] = useState<string | null>(null);
-
   // Handle form submission to evaluate rules
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const { age, department, salary, experience, ast } = values;
 
     // Prepare user attributes object
     const userAttributes = {
-      age: age ?? null, // Use null if age is undefined
+      age: age ?? null,
       department: department || null,
-      salary: salary ?? null, // Use null if salary is undefined
-      experience: experience ?? null, // Use null if experience is undefined
+      salary: salary ?? null,
+      experience: experience ?? null,
     };
 
     console.log("User Attributes:", userAttributes);
@@ -63,20 +109,15 @@ const EvaluateRuleForm = () => {
     try {
       const parsedAst = JSON.parse(ast); // Parse AST JSON
       const isEligible = evaluateRuleFunction(parsedAst, userAttributes);
-      setResult(`User is eligible: ${isEligible}`);
+      toast.success(`User is eligible: ${isEligible}`); // Show toast message
     } catch (error) {
-      setResult("Error parsing AST. Please ensure it is valid JSON.");
+      toast.error("Error parsing AST. Please ensure it is valid JSON."); // Show error toast
     }
   }
 
-  // Function to evaluate the rule against user attributes (implement your logic)
-  const evaluateRuleFunction = (ast: any, userAttributes: any): boolean => {
-    // Your evaluation logic here (similar to the one you've implemented earlier)
-    return true; // Placeholder return value
-  };
-
   return (
     <div className="h-screen flex items-center justify-center">
+      <ToastContainer /> {/* Toast container for displaying messages */}
       <Sheet>
         <SheetTrigger asChild>
           <Button variant="outline">Evaluate Rule</Button>
@@ -192,14 +233,6 @@ const EvaluateRuleForm = () => {
               <Button type="submit">Evaluate</Button>
             </form>
           </Form>
-
-          {/* Display Evaluation Result */}
-          {result && (
-            <div className="mt-4 p-4 bg-gray-200 rounded-md">
-              <h3 className="text-lg font-semibold">Result:</h3>
-              <p>{result}</p>
-            </div>
-          )}
         </SheetContent>
       </Sheet>
     </div>
