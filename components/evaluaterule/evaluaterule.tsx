@@ -65,7 +65,7 @@ const EvaluateRuleForm = () => {
       const isEligible = evaluateRuleFunction(parsedAst, userAttributes);
       setResult(`User is eligible: ${isEligible}`);
     } catch (error) {
-      setResult('Error parsing AST. Please ensure it is valid JSON.');
+      setResult("Error parsing AST. Please ensure it is valid JSON.");
     }
   }
 
@@ -168,7 +168,7 @@ const EvaluateRuleForm = () => {
                 )}
               />
 
-              {/* AST Input */}
+              {/* AST Input (Using Textarea) */}
               <FormField
                 control={form.control}
                 name="ast"
@@ -176,10 +176,11 @@ const EvaluateRuleForm = () => {
                   <FormItem>
                     <FormLabel>AST (JSON)</FormLabel>
                     <FormControl>
-                      <Input 
+                      <textarea
                         placeholder='{"type": "operator", "value": "AND", ...}' 
                         value={field.value} // Keep the value as string
                         onChange={field.onChange}
+                        className="resize-none border rounded-md p-2 w-full h-40 overflow-y-auto" // Style for textarea
                       />
                     </FormControl>
                     <FormMessage />
